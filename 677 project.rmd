@@ -1,0 +1,177 @@
+---
+title: "final project"
+author: "PJ Mu"
+date: "4/24/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+pacman::p_load(haven,ggplot2, reshape2,dplyr,car,FSA,rcompanion,knitr,RColorBrewer,pwr)
+```
+
+## Statistics and the Law
+
+H0: morgage refusal rate of white applicants are the same as that of minority applicant
+H1: morgage refusal rate of white applicants are lower than that of minority applicant 
+
+Assuming the alpha level is 0.05.We will conduct a two-sample t-test to test the argument if there is sufficient evidence for discrimination. Then we will do another two-sample t-test to test if there is sufficient evidence for discriminatiion bewteen high income white and high income minority.
+
+
+```{r assumption}
+acron<-read.csv("acorn.csv")
+boxplot(acron$MIN,acron$WHITE)
+res.ftest <- var.test(acron$MIN,acron$WHITE)
+res.ftest
+```
+
+The p-value of F-test is p = 0.02993. It’s elss than the significance level alpha = 0.05. In conclusion, there is significant difference between the variances of the two sets of data. Therefore, we can use t-test witch assume unequal variances.
+
+
+```{r t-test}
+res <- t.test(acron$MIN, acron$WHITE, var.equal = FALSE,alternative = "greater")
+res
+```
+
+Conclusion:
+
+The p-value of the test is 2.979e-07, which is less than the significance level alpha = 0.05. We reject the null hypothesis and support the argument that the data are sufficient evidence of discrimination to warrant corrective action.
+
+
+## Comparing suppliers
+
+To compare the quality of ornithopters among three high schools: a) Area 51 Regional High
+b) BDV American Borstal c) Giffen Prep, we will use chi-square test to coduct the analysis since the quality of ornithopters(response variable) are categorical, instead of continuous one.
+
+Ho: ornithopters made by all three schools produce same qualities
+Ha: ornithopters mdes by all three shcools produce different qualities
+
+```{r chi-square test}
+fly <- matrix(c(12,23,89,8,12,62,21,30,119),ncol=3,nrow = 3,byrow=TRUE)
+colnames(fly) <- c("dead","art","fly")
+rownames(fly) <- c("Area51","BDV","Giffen")
+fly <- as.table(fly)
+
+chisq.test(fly,correct = F)
+```
+
+Because the p-value is 0.86 greater than 0.05, we fail to reject the null hypothesis and we have sufficient evidence to show that ornithopters made by all three schools produce same qualities.
+
+
+## How deadly are sharks
+
+```{r data exploration}
+shark<-read.csv("sharkattack.csv")
+provoke<-shark%>%filter(Country.code=="US"|Country.code=="AU")%>%
+  filter(Type=="Provoked"|Type=="Unprovoked")
+provoke.tbl<-table(droplevels( provoke$Type),droplevels( provoke$Country))
+coul = brewer.pal(3, "Pastel2") 
+data_percentage=apply(provoke.tbl, 2, function(x){x*100/sum(x,na.rm=T)})
+barplot(data_percentage, col=coul , border="white", xlab="group", main = "provoked v.s. unprovoked")
+```
+
+Just by looking at the provoked v.s. unprovoked in US and Australia (provoked in green), They are at about the same proportion; that is, provoked take 15% of all shark attacks in Australia and it takes 12% of all shark attacks in US. 
+
+```{r EDA}
+fatal.tbl<-provoke<-shark%>%filter(Country.code=="US"|Country.code=="AU")%>%
+  filter(Fatal=="Y"|Fatal=="N")
+fatal.tbl<-table(droplevels(fatal.tbl$Country),droplevels(fatal.tbl$Fatal))
+
+knitr::kable(fatal.tbl)
+
+```
+
+We can also look at the fatal v.s non-fatal sharks attacks in these two countries. From the table, we can see that there are definitely more sharks attacks in US. Howeer, the proportion of fatal attacks in Australia (26.5%) is way higher than that in US (10%). To futuer test that Sharks Australia are more deadly, or fatal than those in US, we conduct a chi-square test.
+
+```{r chis-sqaure}
+
+chisq.test(fatal.tbl,correct = F)
+
+prob <- matrix(c(0.2739171,0.5593643,0.09909629,0.06762231), nrow=2, 
+               dimnames = list(c("Australi","US"),c("NonFatal","Fatal")))
+prob
+io<-879+318+1795+217
+pwr.chisq.test(w = ES.w2(prob), N = io, df = 1, sig.level = 0.05)
+```
+
+From the chi-square test, we have sufficient evidence to say that that sharks attacks in Australia is more fatal, more deadly than sharks attacks in U.S, although the number of attacks in US is higher than that in Australia.With sample size equal to 2109, the statistical power of the test chi-square test is 1.
+
+## Power Analysis
+
+Just like it is described in the book, the power to detect the difference between hypothetical parameters .65 and .45 is .48 while the power to detect the difference between hypothetical parameters .25 and .05 is .82, even though the difference between both pairs of values is .20, which means hypothetical parameters of this binomial distribution doesn not provide a scale of equal units of detectability because 0.25 and 0.05 fall into one extreme of the range.
+
+However, after arcsine transformation, which transforms the proportional parameter (from 0 to 1) to the scale of −π/2 to π/2. and then transformed
+t1 -t2 = h, which has euqal dectectability. This can solve the problem 
+of falling into either side of the range. 
+
+
+## Rain in Southern Illinois
+```{r}
+ill.60 <- read.table("~/Documents/illinois storms/ill-60.txt", quote="\"", comment.char="")
+yr60<-as.numeric(as.array(ill.60[,1]))
+ill.61 <- read.table("~/Documents/illinois storms/ill-61.txt", quote="\"", comment.char="")
+yr61<-as.numeric(as.array(ill.61[,1]))
+ill.62 <- read.table("~/Documents/illinois storms/ill-62.txt", quote="\"", comment.char="")
+yr62<-as.numeric(as.array(ill.62[,1]))
+ill.63 <- read.table("~/Documents/illinois storms/ill-63.txt", quote="\"", comment.char="")
+yr63<-as.numeric(as.array(ill.63[,1]))
+ill.64 <- read.table("~/Documents/illinois storms/ill-64.txt", quote="\"", comment.char="")
+yr64<-as.numeric(as.array(ill.64[,1]))
+```
+
+
+```{r use fitdistplus}
+library(fitdistrplus)
+
+plotdist(yr60)
+plotdist(yr61)
+plotdist(yr62)
+plotdist(yr63)
+plotdist(yr64)
+
+paste("The total rainfall for 1960 is",sum(yr60),sep = " ")
+paste("The total rainfall for 1960 is",sum(yr61),sep = " ")
+paste("The total rainfall for 1960 is",sum(yr62),sep = " ")
+paste("The total rainfall for 1960 is",sum(yr63),sep = " ")
+paste("The total rainfall for 1960 is",sum(yr64),sep = " ")
+```
+
+From the total rainfall of each year, the rainfall in 1961 is definitely wetter because of
+13.2 units of rainfall in total. From the distribution of rainfall in year 1960, we know that this year is wetter because of storms, though not too many, produce more rain each time compared to rainfall in other 4 years. In terms of all 5 distribution in these years, they are similar because most of rainfall among are concentrated on the left side of the distribution.
+
+```{r fit gamma distribution}
+all.rainfall<-c(yr60,yr61,yr62,yr63,yr64)
+
+
+fgamma <- fitdist(all.rainfall, "gamma")
+plot(fgamma)
+summary(fgmma)
+
+```
+
+
+Using the fitdist() funtion, we fit the gamma distribution into all observed rainfall data of 
+four year from 1960 to 1964. From the density and QQplots, the gamma distribution fits really well on this data. Changnon and Huff are definitely right about using gamma distribution.
+
+```{r MM & MLE}
+
+fmm <- fitdist(all.rainfall, "gamma",method = "mme")
+bmm <- bootdist(fmm)
+summary(bmm)
+
+fgamma <- fitdist(all.rainfall, "gamma",method = "mle")
+bgmm <- bootdist(fgamma)
+summary(bgmm)
+
+```
+
+For method of moment the 95% confidence interval of shape from bootstrap sample is (0.28,0.53), the rate is (1.17,2.62). For MLE, the 95% confidence interval of shape from bootstrap sample is (0.38,0.51),the rate is (1.57,2.59). Apparently, the MLE estimates have narraow CI and thus lower variances.I would choose to present MLE as the estimator because it has lower variance.
+
+
+## Decision Theory
+
+
+
+
+
+
